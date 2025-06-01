@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, ThumbsUp, ThumbsDown, Sparkles } from 'lucide-react';
+import axios from 'axios';
 
 interface SentimentResult {
   label: string;
@@ -15,16 +16,31 @@ export default function Home() {
   const [text, setText] = useState('');
   const [result, setResult] = useState<SentimentResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [modelLoading, setModelLoading] = useState(false);
-  const [classifier, setClassifier] = useState<any>(null);
 
-  const initializeModel = async () => {
-  };
 
   const analyzeSentiment = async () => {
-    if (!text.trim()) return;
-    
+    try {
+      setLoading(true);
+      setResult(null);
+  
+      const response = await axios.post('http://localhost:5000/', 
+        new URLSearchParams({ text }),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      );
+  
+      if (response.data) {
+        setResult({
+          label: response.data.label,
+          score: response.data.score,
+        });
+      }
+    } catch (error) {
+      console.error("Error analyzing sentiment:", error);
+    } finally {
+      setLoading(false);
+    }
   };
+  
 
   const getSentimentColor = (label: string) => {
     return label === 'POSITIVE' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200';
@@ -78,17 +94,18 @@ export default function Home() {
             <div className="flex gap-3">
               <Button 
                 onClick={analyzeSentiment}
-                disabled={!text.trim() || loading || modelLoading}
+                disabled={!text.trim() || loading}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6"
               >
-                {loading || modelLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {modelLoading ? 'Loading Model...' : 'Analyzing...'}
-                  </>
-                ) : (
-                  'Analyze Sentiment'
-                )}
+               {loading ? (
+  <>
+    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+    Analyzing...
+  </>
+) : (
+  'Analyze Sentiment'
+)}
+
               </Button>
               
               <Button 
@@ -151,7 +168,7 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {modelLoading && (
+        {loading && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <Card className="p-6 m-4">
               <div className="flex items-center gap-3">
